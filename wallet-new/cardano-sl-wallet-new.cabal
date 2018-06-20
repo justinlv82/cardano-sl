@@ -337,6 +337,7 @@ executable wal-integr-test
                      , aeson-diff
                      , aeson-pretty
                      , bytestring
+                     , cardano-sl-binary
                      , cardano-sl-core
                      , cardano-sl-crypto
                      , cardano-sl-wallet
@@ -351,6 +352,7 @@ executable wal-integr-test
                      , mtl
                      , optparse-applicative
                      , pretty-show
+                     , serokell-util
                      , servant
                      , servant-client
                      , servant-quickcheck
