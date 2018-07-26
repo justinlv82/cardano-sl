@@ -119,8 +119,10 @@ library
                        Cardano.Wallet.Util
 
                        Cardano.Wallet.WalletLayer
+                       Cardano.Wallet.WalletLayer.Transactions
                        Cardano.Wallet.WalletLayer.Types
                        Cardano.Wallet.WalletLayer.ExecutionTimeLimit
+
 
   other-modules:       Cardano.Wallet.WalletLayer.Kernel
                        Cardano.Wallet.WalletLayer.Legacy

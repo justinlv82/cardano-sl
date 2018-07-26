@@ -138,6 +138,7 @@ genMeta = do
                    <*> arbitrary
                    <*> arbitrary
                    <*> arbitrary
+                   <*> arbitrary
     pure (STB meta)
 
 newtype TxMetaWrapper = TxMetaWrapper (ShowThroughBuild TxMeta) deriving Show
@@ -223,7 +224,8 @@ txMetaStorageSpecs = do
             run $ withTemporaryDb $ \hdl -> do
                 let testMeta = unSTB testMetaSTB
                 mbTx <- getTxMeta hdl (testMeta ^. txMetaId)
-                fmap DeepEqual mbTx `shouldBe` Nothing
+                mbTxByAcc <- getTxMeta hdl (testMeta ^. txMetaId)a
+                fmap DeepEqual (mbTx, mbTxByAcc) `shouldBe` (Nothing, Nothing)
 
         it "inserting the same tx twice is a no-op" $ monadicIO $ do
             testMetaSTB <- pick genMeta

@@ -7,6 +7,9 @@ module Cardano.Wallet.WalletLayer.QuickCheck
 
 import           Universum
 
+-- import           Cardano.Wallet.API.Request (RequestParams (..))
+-- import           Cardano.Wallet.API.Request.Filter (FilterOperations (..))
+-- import           Cardano.Wallet.API.Request.Sort (SortOperations (..))
 import           Cardano.Wallet.Kernel.Diffusion (WalletDiffusion (..))
 import           Cardano.Wallet.Orphans.Arbitrary ()
 import           Cardano.Wallet.WalletLayer.Types (ActiveWalletLayer (..),
@@ -41,6 +44,8 @@ bracketPassiveWallet =
 
         , _pwlCreateAddress  = \_     -> liftedGen
         , _pwlGetAddresses   = \_     -> liftedGen
+
+        , _pwlGetTransactions = \_ _ _ _ _ _ -> liftedGen
 
         , _pwlApplyBlocks    = \_     -> liftedGen
         , _pwlRollbackBlocks = \_     -> liftedGen

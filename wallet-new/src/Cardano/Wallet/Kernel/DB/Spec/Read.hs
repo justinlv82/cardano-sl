@@ -4,6 +4,8 @@ module Cardano.Wallet.Kernel.DB.Spec.Read (
     queryAccountTotalBalance
   , queryAccountUtxo
   , queryAccountAvailableUtxo
+  , queryTxSlotId
+  , queryTxIsPending
   ) where
 
 import           Universum
@@ -11,7 +13,7 @@ import           Universum
 import qualified Data.Map.Strict as Map
 
 import qualified Pos.Core as Core
-import           Pos.Core.Txp (TxOut (..), TxOutAux (..))
+import           Pos.Core.Txp (TxId, TxOut (..), TxOutAux (..))
 import           Pos.Txp (Utxo)
 
 import           Cardano.Wallet.Kernel.DB.HdWallet
@@ -20,6 +22,7 @@ import           Cardano.Wallet.Kernel.DB.InDb
 import           Cardano.Wallet.Kernel.DB.Spec
 import           Cardano.Wallet.Kernel.DB.Spec.Util
 
+import           Cardano.Wallet.Kernel.DB.BlockMeta
 import           Cardano.Wallet.Kernel.DB.Util.IxSet (IxSet)
 import qualified Cardano.Wallet.Kernel.DB.Util.IxSet as IxSet
 
@@ -49,6 +52,16 @@ ourUtxo addrs = Map.filter (ourTxOut addrs)
 
 accountUtxo :: Checkpoint -> Utxo
 accountUtxo = view (checkpointUtxo . fromDb)
+
+txSlot :: TxId -> Checkpoint -> (Maybe Core.SlotId)
+txSlot txId checkpoint = Map.lookup txId slots
+  where
+    slots = view (checkpointBlockMeta . blockMetaSlotId . fromDb) checkpoint
+
+isTxPending :: TxId -> Checkpoint -> Bool
+isTxPending txId checkpoint = Map.member txId pendingTxs
+  where
+    pendingTxs = view (checkpointPending . pendingTransactions . fromDb) checkpoint
 
 accountUtxoBalance :: Checkpoint -> Core.Coin
 accountUtxoBalance = view (checkpointUtxoBalance . fromDb)
@@ -116,5 +129,17 @@ queryAccountUtxo accountId db
 queryAccountAvailableUtxo :: HdAccountId -> HD.HdQueryErr UnknownHdAccount Utxo
 queryAccountAvailableUtxo accountId db
     = accountAvailableUtxo <$> checkpoint
+    where
+        checkpoint = HD.readHdAccountCurrentCheckpoint accountId db
+
+queryTxSlotId :: TxId -> HdAccountId -> HD.HdQueryErr UnknownHdAccount (Maybe Core.SlotId)
+queryTxSlotId txId accountId db
+    = txSlot txId <$> checkpoint
+    where
+        checkpoint = HD.readHdAccountCurrentCheckpoint accountId db
+
+queryTxIsPending :: TxId -> HdAccountId -> HD.HdQueryErr UnknownHdAccount Bool
+queryTxIsPending txId accountId db
+    = isTxPending txId <$> checkpoint
     where
         checkpoint = HD.readHdAccountCurrentCheckpoint accountId db

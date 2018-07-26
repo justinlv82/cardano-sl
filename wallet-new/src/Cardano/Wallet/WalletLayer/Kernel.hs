@@ -23,20 +23,24 @@ import qualified Cardano.Wallet.Kernel.Addresses as Kernel
 import qualified Cardano.Wallet.Kernel.Transactions as Kernel
 import qualified Cardano.Wallet.Kernel.Wallets as Kernel
 
+import           Cardano.Wallet.API.Request
 import qualified Cardano.Wallet.Kernel.DB.HdWallet as HD
 import           Cardano.Wallet.Kernel.DB.InDb (InDb (..), fromDb)
 import           Cardano.Wallet.Kernel.DB.Resolved (ResolvedBlock)
+import qualified Cardano.Wallet.Kernel.DB.TxMeta as TxMeta
 import           Cardano.Wallet.Kernel.Diffusion (WalletDiffusion (..))
 import           Cardano.Wallet.Kernel.Keystore (Keystore)
 import           Cardano.Wallet.Kernel.Types (AccountId (..),
                      RawResolvedBlock (..), fromRawResolvedBlock)
 import           Cardano.Wallet.WalletLayer.ExecutionTimeLimit
                      (limitExecutionTimeTo)
+import qualified Cardano.Wallet.WalletLayer.Transactions as Transactions
 import           Cardano.Wallet.WalletLayer.Types (ActiveWalletLayer (..),
                      CreateAddressError (..), CreateWalletError (..),
                      EstimateFeesError (..), NewPaymentError (..),
                      PassiveWalletLayer (..), WalletLayerError (..))
 
+import           Cardano.Wallet.API.Request.Pagination
 import           Cardano.Wallet.Kernel.CoinSelection.FromGeneric
                      (CoinSelectionOptions (..), ExpenseRegulation,
                      InputGrouping, newOptions)
@@ -46,10 +50,14 @@ import           Pos.Core (Address, Coin, decodeTextAddress, mkCoin)
 import qualified Pos.Core as Core
 import           Pos.Core.Chrono (OldestFirst (..))
 
+import           Cardano.Wallet.API.Request (RequestParams (..))
+import           Cardano.Wallet.API.Request.Filter as F
+-- import qualified Cardano.Wallet.API.Request.Parameters as Parameters
 import qualified Cardano.Wallet.API.V1.Types as V1
 import qualified Cardano.Wallet.Kernel.Actions as Actions
 import           Cardano.Wallet.Kernel.Util (getCurrentTimestamp)
 import           Pos.Crypto.Signing
+
 
 import           Cardano.Wallet.API.V1.Types (Payment (..),
                      PaymentDistribution (..), PaymentSource (..), V1 (..),
@@ -163,6 +171,32 @@ bracketPassiveWallet logFunction keystore f =
                                      Right newAddr -> return (Right newAddr)
                                      Left  err     -> return (Left $ CreateAddressError err)
             , _pwlGetAddresses   = error "Not implemented!"
+            , _pwlGetTransactions =
+                \ mbWalletId mbAccountIndex mbAddress params fop sop -> liftIO $ do
+                    let PaginationParams{..}  = rpPaginationParams params
+                    let PerPage pp = ppPerPage
+                    let Page cp = ppPage
+                    case Transactions.toAccountFops mbWalletId mbAccountIndex of
+                        Left x            -> return $ Left x
+                        Right accountFops -> do
+                            case Transactions.toSorting sop of
+                                Left err -> return $ Left err
+                                Right mSop -> do
+                                    db <- Kernel.getWalletSnapshot wallet
+                                    let k = (2000 :: Word)         -- TODO: retrieve this constant from Core
+                                    let currentSlot = error "TODO" -- TODO: retrieve this constant from Core
+                                    meta <- TxMeta.getTxMetas (wallet ^. Kernel.walletMeta)
+                                        (TxMeta.Offset $ fromIntegral $ (cp - 1) * pp + 1)
+                                        (TxMeta.Limit $ fromIntegral pp)
+                                        accountFops
+                                        (unV1 <$> mbAddress)
+                                        -- Forgetting to map unV1 here will fail silently, because the
+                                        -- type will be inferred wrongly and no filter operations will be found
+                                        (Transactions.transf $ (flipfmap unV1) <$> F.findMatchingFilterOp fop)
+                                        (Transactions.transf $ (flipfmap unV1) <$> F.findMatchingFilterOp fop)
+                                        mSop
+                                    let txs = map (Transactions.metaToTx db k currentSlot) meta
+                                    return $ Right $ Transactions.respond params txs 0
 
             , _pwlApplyBlocks    = liftIO . invoke . Actions.ApplyBlocks
             , _pwlRollbackBlocks = liftIO . invoke . Actions.RollbackBlocks
@@ -264,3 +298,16 @@ setupPayment grouping regulation payment = do
                  <$> (pmtDestinations payment)
 
     return (opts , accountId , payees)
+
+{-}
+getTransactions
+    :: MonadIO m
+    => Kernel.PassiveWallet
+    -> Maybe V1.WalletId
+    -> Maybe V1.AccountIndex
+    -> Maybe (V1 Core.Address)
+    -> RequestParams
+    -> FilterOperations V1.Transaction
+    -> SortOperations V1.Transaction
+    -> m (Either GetTxError [V1.Transaction])
+-}

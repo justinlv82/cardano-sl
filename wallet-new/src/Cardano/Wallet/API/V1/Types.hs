@@ -982,7 +982,6 @@ instance BuildableSafeGen WalletAddress where
 instance Buildable [WalletAddress] where
     build = bprint listJson
 
-
 -- | Create a new Address
 data NewAddress = NewAddress
   { newaddrSpendingPassword :: !(Maybe SpendingPassword)

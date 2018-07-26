@@ -44,9 +44,11 @@ import           Pos.Wallet.Web.State.State (WalletDbReader, askWalletDB,
 import           Pos.Wallet.Web.State.Storage (getWalletInfo)
 import           Pos.Wallet.Web.Tracking.Types (SyncQueue)
 
+-- import           Cardano.Wallet.API.Request (RequestParams (..))
+-- import           Cardano.Wallet.API.Request.Filter (FilterOperations (..))
+-- import           Cardano.Wallet.API.Request.Sort (SortOperations (..))
 import           Pos.Block.Types (Blund)
 import           Pos.Core.Chrono (NE, NewestFirst (..), OldestFirst (..))
-
 
 -- | Let's unify all the requirements for the legacy wallet.
 type MonadLegacyWallet ctx m =
@@ -86,9 +88,12 @@ bracketPassiveWallet =
         , _pwlCreateAddress  = pwlCreateAddress
         , _pwlGetAddresses   = pwlGetAddresses
 
+        , _pwlGetTransactions = pwlGetTransactions
+
         , _pwlApplyBlocks    = pwlApplyBlocks
         , _pwlRollbackBlocks = pwlRollbackBlocks
         }
+    pwlGetTransactions = error "TODO"
 
 
 -- | Initialize the active wallet.
@@ -230,7 +235,7 @@ pwlGetAccounts
 pwlGetAccounts wId = do
     cWId        <- migrate wId
     cAccounts   <- V0.getAccounts $ Just cWId
-    migrate cAccounts
+    migrate  cAccounts
 
 pwlGetAccount
     :: forall ctx m. (MonadLegacyWallet ctx m)
@@ -272,6 +277,13 @@ pwlCreateAddress = error "Not implemented!"
 
 pwlGetAddresses :: WalletId -> m [Address]
 pwlGetAddresses = error "Not implemented!"
+
+------------------------------------------------------------
+-- Transaction
+------------------------------------------------------------
+
+-- pwlGetTransactions :: Maybe WalletId -> Maybe AccountIndex -> Maybe (V1 Address) -> m [Transaction]
+-- pwlGetTransactions =  error "Not implemented!"
 
 ------------------------------------------------------------
 -- Apply Block

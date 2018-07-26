@@ -11,6 +11,7 @@ module Cardano.Wallet.Kernel.Internal (
     PassiveWallet(..)
   , ActiveWallet(..)
   , walletKeystore
+  , walletMeta
   , wallets
   , walletLogMessage
   ) where
@@ -27,8 +28,8 @@ import           Cardano.Wallet.Kernel.Diffusion (WalletDiffusion (..))
 import           Cardano.Wallet.Kernel.Keystore (Keystore)
 
 import           Cardano.Wallet.Kernel.DB.AcidState (DB)
+import           Cardano.Wallet.Kernel.DB.TxMeta
 import           Cardano.Wallet.Kernel.Submission (WalletSubmission)
-
 -- Handy re-export of the pure getters
 
 import           Pos.Core (ProtocolMagic)
@@ -50,6 +51,8 @@ data PassiveWallet = PassiveWallet {
       -- ^ An opaque handle to a place where we store the 'EncryptedSecretKey'.
     , _wallets          :: AcidState DB
       -- ^ Database handle
+    , _walletMeta       :: MetaDBHandle
+      -- ^ MetaData handle
     }
 
 makeLenses ''PassiveWallet

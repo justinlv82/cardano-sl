@@ -72,7 +72,6 @@ import           Pos.Wallet.Web.Tracking.Types (SyncQueue)
 import           Pos.Web (serveWeb)
 import           Pos.WorkMode (WorkMode)
 
-
 -- A @Plugin@ running in the monad @m@.
 type Plugin m = [Diffusion m -> m ()]
 

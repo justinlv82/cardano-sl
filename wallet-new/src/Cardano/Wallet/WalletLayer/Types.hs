@@ -16,6 +16,9 @@ module Cardano.Wallet.WalletLayer.Types
 
     , createAddress
     , getAddresses
+
+    , getTransactions
+
     , applyBlocks
     , rollbackBlocks
     -- * Errors
@@ -24,6 +27,7 @@ module Cardano.Wallet.WalletLayer.Types
     , NewPaymentError(..)
     , EstimateFeesError(..)
     , CreateAddressError(..)
+    , GetTxError(..)
     ) where
 
 import qualified Prelude
@@ -34,9 +38,13 @@ import           Control.Lens (makeLenses)
 import           Formatting (bprint, build, formatToString, (%))
 import qualified Formatting.Buildable
 
+import           Cardano.Wallet.API.Request (RequestParams (..))
+import           Cardano.Wallet.API.Request.Filter (FilterOperations (..))
+import           Cardano.Wallet.API.Request.Sort (SortOperations (..))
+import           Cardano.Wallet.API.Response (WalletResponse)
 import           Cardano.Wallet.API.V1.Types (Account, AccountIndex,
                      AccountUpdate, Address, NewAccount, NewAddress, NewWallet,
-                     Payment, Wallet, WalletId, WalletUpdate)
+                     Payment, Transaction, V1, Wallet, WalletId, WalletUpdate)
 
 import qualified Cardano.Wallet.Kernel.Addresses as Kernel
 import qualified Cardano.Wallet.Kernel.Transactions as Kernel
@@ -111,7 +119,34 @@ instance Buildable CreateAddressError where
     build (CreateAddressTimeLimitReached timeLimit) =
         bprint ("CreateAddressTimeLimitReached " % build) timeLimit
 
+data GetTxError =
+      GetTxMissingWalletIdError
+    | GetTxAddressDecodingFailed Text
+    | GetTxInvalidSortingOpearation String
+    | GetTxInvalidFilteringOpearation String
+    -- throwM MissingRequiredParams { requiredParams = pure ("wallet_id", "WalletId") }
 
+instance Show GetTxError where
+    show = formatToString build
+
+instance Buildable GetTxError where
+    build GetTxMissingWalletIdError =
+        bprint "GetTxMissingWalletIdError "
+    build (GetTxAddressDecodingFailed txt) =
+        bprint ("GetTxAddressDecodingFailed " % build) txt
+    build (GetTxInvalidSortingOpearation txt) =
+        bprint ("GetTxInvalidSortingOpearation " % build) txt
+    build (GetTxInvalidFilteringOpearation txt) =
+        bprint ("GetTxInvalidFilteringOpearation " % build) txt
+
+
+instance Arbitrary GetTxError where
+    arbitrary = oneof [ pure GetTxMissingWalletIdError
+                      , pure (GetTxAddressDecodingFailed "123")
+                      , pure (GetTxAddressDecodingFailed "by_amount")
+                      ]
+
+instance Exception GetTxError
 ------------------------------------------------------------
 -- General-purpose errors which may arise when working with
 -- the wallet layer
@@ -146,6 +181,9 @@ data PassiveWalletLayer m = PassiveWalletLayer
     -- * addresses
     , _pwlCreateAddress  :: NewAddress -> m (Either CreateAddressError Address)
     , _pwlGetAddresses   :: WalletId -> m [Address]
+    -- * transactions
+    , _pwlGetTransactions :: Maybe WalletId -> Maybe AccountIndex -> Maybe (V1 Address)
+        -> RequestParams -> FilterOperations Transaction -> SortOperations Transaction -> m (Either GetTxError (WalletResponse [Transaction]))
     -- * core API
     , _pwlApplyBlocks    :: OldestFirst NE Blund -> m ()
     , _pwlRollbackBlocks :: NewestFirst NE Blund -> m ()
@@ -196,6 +234,9 @@ createAddress pwl = pwl ^. pwlCreateAddress
 getAddresses :: forall m. PassiveWalletLayer m -> WalletId -> m [Address]
 getAddresses pwl = pwl ^. pwlGetAddresses
 
+getTransactions :: forall m. PassiveWalletLayer m -> Maybe WalletId -> Maybe AccountIndex
+    -> Maybe (V1 Address) -> RequestParams -> FilterOperations Transaction -> SortOperations Transaction -> m (Either GetTxError (WalletResponse [Transaction]))
+getTransactions pwl = pwl ^. pwlGetTransactions
 
 applyBlocks :: forall m. PassiveWalletLayer m -> OldestFirst NE Blund -> m ()
 applyBlocks pwl = pwl ^. pwlApplyBlocks

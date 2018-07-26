@@ -117,6 +117,13 @@ data FilterOperation ix a =
     | FilterIn [ix]
     deriving Eq
 
+flipfmap :: (ixa -> ixb) -> FilterOperation ixa a -> FilterOperation ixb a
+flipfmap f fop = case fop of
+    FilterByIndex x          -> FilterByIndex (f x)
+    FilterByPredicate ford x -> FilterByPredicate ford (f x)
+    FilterByRange from to    -> FilterByRange  (f from) (f to)
+    FilterIn ls              -> FilterIn (f <$> ls)
+
 instance (BuildableSafe ix, sym ~ IndexToQueryParam a ix, KnownSymbol sym) => Show (FilterOperation ix a) where
     show = formatToString build
 
