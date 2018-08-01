@@ -97,7 +97,7 @@ library
                        Cardano.Wallet.Kernel.Internal
                        Cardano.Wallet.Kernel.Keystore
                        Cardano.Wallet.Kernel.Mode
-                       Cardano.Wallet.Kernel.MonadDBReadAdaptor
+                       Cardano.Wallet.Kernel.NodeStateAdaptor
                        Cardano.Wallet.Kernel.PrefilterTx
                        Cardano.Wallet.Kernel.Submission
                        Cardano.Wallet.Kernel.Submission.Worker

@@ -48,7 +48,7 @@ import           Pos.Core.Chrono (OldestFirst (..))
 
 import qualified Cardano.Wallet.API.V1.Types as V1
 import qualified Cardano.Wallet.Kernel.Actions as Actions
-import           Cardano.Wallet.Kernel.MonadDBReadAdaptor (MonadDBReadAdaptor)
+import           Cardano.Wallet.Kernel.NodeStateAdaptor (NodeStateAdaptor)
 import           Cardano.Wallet.Kernel.Util (getCurrentTimestamp)
 import           Pos.Crypto.Signing
 
@@ -62,7 +62,7 @@ bracketPassiveWallet
     :: forall m n a. (MonadIO n, MonadIO m, MonadMask m)
     => (Severity -> Text -> IO ())
     -> Keystore
-    -> MonadDBReadAdaptor IO
+    -> NodeStateAdaptor IO
     -> (PassiveWalletLayer n -> Kernel.PassiveWallet -> m a) -> m a
 bracketPassiveWallet logFunction keystore rocksDB f =
     Kernel.bracketPassiveWallet logFunction keystore rocksDB $ \w -> do
@@ -175,7 +175,7 @@ bracketPassiveWallet logFunction keystore rocksDB f =
     blundToResolvedBlock :: Blund -> Maybe ResolvedBlock
     blundToResolvedBlock (b,u)
         = rightToJust b <&> \mainBlock ->
-            fromRawResolvedBlock
+            fromRawResolvedBlock (error "TODO: blundToResolvedBlock chainBrief")
             $ UnsafeRawResolvedBlock mainBlock spentOutputs'
         where
             spentOutputs' = map (map fromJust) $ undoTx u

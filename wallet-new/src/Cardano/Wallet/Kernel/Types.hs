@@ -27,8 +27,7 @@ import           Data.Word (Word32)
 import           Formatting.Buildable (Buildable (..))
 
 import           Pos.Chain.Txp (Utxo)
-import           Pos.Core.Block (MainBlock, gbBody, mainBlockSlot, mbTxs,
-                     mbWitnesses)
+import           Pos.Core.Block (MainBlock, gbBody, mbTxs, mbWitnesses)
 import           Pos.Core.Txp (Tx, TxAux (..), TxId, TxIn (..), TxOut,
                      TxOutAux (..), txInputs, txOutputs)
 import           Pos.Crypto.Hashing (hash)
@@ -37,6 +36,7 @@ import           Serokell.Util (enumerate)
 import           Formatting (bprint, (%))
 import qualified Formatting as F
 
+import           Cardano.Wallet.Kernel.ChainState
 import qualified Cardano.Wallet.Kernel.DB.HdWallet as HD
 import           Cardano.Wallet.Kernel.DB.InDb
 import           Cardano.Wallet.Kernel.DB.Resolved
@@ -185,12 +185,11 @@ outs tx = enumerate $ toList $ tx ^. txOutputs
 toTxInOut :: TxId -> (Word32, TxOut) -> (TxIn, TxOutAux)
 toTxInOut txId (idx, out) = (TxInUtxo txId idx, TxOutAux out)
 
-fromRawResolvedBlock :: RawResolvedBlock -> ResolvedBlock
-fromRawResolvedBlock rb = ResolvedBlock {
-      _rbTxs  = zipWith aux (getBlockTxs b)
-                            (rawResolvedBlockInputs rb)
-
-    , _rbSlot = InDb (b ^. mainBlockSlot)
+fromRawResolvedBlock :: ChainBrief -> RawResolvedBlock -> ResolvedBlock
+fromRawResolvedBlock brief rb = ResolvedBlock {
+      _rbTxs   = zipWith aux (getBlockTxs b)
+                             (rawResolvedBlockInputs rb)
+    , _rbBrief = brief
     }
   where
     b = rawResolvedBlock rb

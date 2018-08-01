@@ -277,7 +277,7 @@ fillInDefaults def accs =
 -- | Specialization of 'fillInDefaults' for prefiltered blocks
 fillInEmptyBlock :: Map HdAccountId PrefilteredBlock
                  -> Update' HdWallets e (Map HdAccountId PrefilteredBlock)
-fillInEmptyBlock = fillInDefaults (const emptyPrefilteredBlock)
+fillInEmptyBlock = fillInDefaults $ \_ -> emptyPrefilteredBlock (error "TODO: fillInEmptyBlock chainBrief")
 
 -- | For each of the specified accounts, create them if they do not exist,
 -- and apply the specified function.
@@ -328,6 +328,7 @@ createPrefiltered initUtxoAndAddrs applyP accs = do
                 -- Since this is the first checkpoint before we have applied
                 -- any blocks, the block metadata is empty
                 , _checkpointBlockMeta   = mempty
+                , _checkpointChainBrief  = error "TODO: firstCheckpoint chainBrief"
                 }
 
 {-------------------------------------------------------------------------------

@@ -60,8 +60,8 @@ import           Cardano.Wallet.Kernel.DB.HdWallet
 import           Cardano.Wallet.Kernel.DB.InDb
 import           Cardano.Wallet.Kernel.DB.Resolved (ResolvedBlock)
 import           Cardano.Wallet.Kernel.DB.Spec (singletonPending)
-import           Cardano.Wallet.Kernel.MonadDBReadAdaptor (LockContext (..),
-                     MonadDBReadAdaptor, withMonadDBRead)
+import           Cardano.Wallet.Kernel.NodeStateAdaptor (LockContext (..),
+                     NodeStateAdaptor)
 import           Cardano.Wallet.Kernel.Submission (Cancelled, WalletSubmission,
                      addPending, defaultResubmitFunction, exponentialBackoff,
                      newWalletSubmission, tick)
@@ -75,7 +75,6 @@ import           Pos.Core (ProtocolMagic)
 import           Pos.Core.Chrono (OldestFirst)
 import           Pos.Core.Txp (TxAux (..))
 import           Pos.Crypto (hash)
-import           Pos.DB.BlockIndex (getTipHeader)
 
 {-------------------------------------------------------------------------------
   Passive Wallet Resource Management
@@ -88,14 +87,14 @@ import           Pos.DB.BlockIndex (getTipHeader)
 bracketPassiveWallet :: (MonadMask m, MonadIO m)
                      => (Severity -> Text -> IO ())
                      -> Keystore
-                     -> MonadDBReadAdaptor IO
+                     -> NodeStateAdaptor IO
                      -> (PassiveWallet -> m a) -> m a
-bracketPassiveWallet logMsg keystore rocksDB f =
+bracketPassiveWallet logMsg keystore node f =
     bracket (liftIO $ openMemoryState defDB)
             (\_ -> return ())
             (\db ->
                 bracket
-                  (liftIO $ initPassiveWallet logMsg keystore db rocksDB)
+                  (liftIO $ initPassiveWallet logMsg keystore db node)
                   (\_ -> return ())
                   f)
 
@@ -114,10 +113,10 @@ withKeystore pw action = action (pw ^. walletKeystore)
 initPassiveWallet :: (Severity -> Text -> IO ())
                   -> Keystore
                   -> AcidState DB
-                  -> MonadDBReadAdaptor IO
+                  -> NodeStateAdaptor IO
                   -> IO PassiveWallet
-initPassiveWallet logMessage keystore db rocksDB = do
-    return $ PassiveWallet logMessage keystore db rocksDB
+initPassiveWallet logMessage keystore db node = do
+    return $ PassiveWallet logMessage keystore db node
 
 -- | Initialize the Passive wallet (specified by the ESK) with the given Utxo
 --
@@ -125,11 +124,11 @@ initPassiveWallet logMessage keystore db rocksDB = do
 -- called when the node is initialized (when run in the node proper).
 init :: PassiveWallet -> IO ()
 init PassiveWallet{..} = do
-    tip <- withMonadDBRead _walletRocksDB $ \_lock -> getTipHeader
-    csr <- getChainStateRestoration _walletRocksDB NotYetLocked
+    -- TODO: <debugging>
+    csr <- getChainStateRestoration _walletNode NotYetLocked
     writeFile "/tmp/csr.txt" (pretty csr)
-    _walletLogMessage Info $ "Passive Wallet kernel initialized. Current tip: "
-                          <> pretty tip
+    -- TODO: </debugging>
+    _walletLogMessage Info $ "Passive Wallet kernel initialized."
 
 {-------------------------------------------------------------------------------
   Passive Wallet API implementation

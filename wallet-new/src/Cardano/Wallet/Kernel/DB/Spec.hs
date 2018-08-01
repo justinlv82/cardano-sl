@@ -16,6 +16,7 @@ module Cardano.Wallet.Kernel.DB.Spec (
   , checkpointUtxoBalance
   , checkpointPending
   , checkpointBlockMeta
+  , checkpointChainBrief
     -- ** Lenses into the current checkpoint
   , currentCheckpoint
   , currentUtxo
@@ -37,8 +38,8 @@ import           Serokell.Util.Text (listJsonIndent, mapJson)
 
 import qualified Pos.Chain.Txp as Core
 import qualified Pos.Core as Core
-import qualified Pos.Core.Txp as Txp
 
+import           Cardano.Wallet.Kernel.ChainState
 import           Cardano.Wallet.Kernel.DB.BlockMeta
 import           Cardano.Wallet.Kernel.DB.InDb
 
@@ -48,7 +49,7 @@ import           Cardano.Wallet.Kernel.DB.InDb
 
 type Balance = Integer
 
-type PendingTxs = Map Txp.TxId Txp.TxAux
+type PendingTxs = Map Core.TxId Core.TxAux
 
 -- | Pending transactions
 data Pending = Pending {
@@ -61,7 +62,7 @@ emptyPending :: Pending
 emptyPending = Pending . InDb $ mempty
 
 -- | Returns a new, empty 'Pending' set.
-singletonPending :: Txp.TxId -> Txp.TxAux -> Pending
+singletonPending :: Core.TxId -> Core.TxAux -> Pending
 singletonPending txId txAux = Pending . InDb $ M.singleton txId txAux
 
 -- | Computes the union between two 'Pending' sets.
@@ -70,7 +71,7 @@ unionPending (Pending new) (Pending old) =
     Pending (M.union <$> new <*> old)
 
 -- | Computes the difference between two 'Pending' sets.
-removePending :: Set Txp.TxId -> Pending -> Pending
+removePending :: Set Core.TxId -> Pending -> Pending
 removePending ids (Pending (InDb old)) = Pending (InDb $ old `withoutKeys` ids)
     where
         withoutKeys :: Ord k => Map k a -> Set k -> Map k a
@@ -93,10 +94,11 @@ removePending ids (Pending (InDb old)) = Pending (InDb $ old `withoutKeys` ids)
 --
 -- NOTE: This is the same across all wallet types.
 data Checkpoint = Checkpoint {
-      _checkpointUtxo        :: InDb Core.Utxo
-    , _checkpointUtxoBalance :: InDb Core.Coin
-    , _checkpointPending     :: Pending
-    , _checkpointBlockMeta   :: BlockMeta
+      _checkpointUtxo        :: !(InDb Core.Utxo)
+    , _checkpointUtxoBalance :: !(InDb Core.Coin)
+    , _checkpointPending     :: !Pending
+    , _checkpointBlockMeta   :: !BlockMeta
+    , _checkpointChainBrief  :: !ChainBrief
     }
 
 -- | List of checkpoints

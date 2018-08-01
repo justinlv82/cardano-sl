@@ -120,10 +120,11 @@ applyBlock :: PrefilteredBlock
            -> Checkpoints
 applyBlock prefBlock checkpoints
     = Checkpoint {
-          _checkpointUtxo           = InDb utxo''
-        , _checkpointUtxoBalance    = InDb balance''
-        , _checkpointPending        = Pending . InDb $ pending''
-        , _checkpointBlockMeta      = blockMeta''
+          _checkpointUtxo        = InDb utxo''
+        , _checkpointUtxoBalance = InDb balance''
+        , _checkpointPending     = Pending . InDb $ pending''
+        , _checkpointBlockMeta   = blockMeta''
+        , _checkpointChainBrief  = pfbBrief prefBlock
         } NE.<| checkpoints
     where
         utxo'        = checkpoints ^. currentUtxo
@@ -167,6 +168,7 @@ rollback (c :| c' : cs) = Checkpoint {
       _checkpointUtxo        = c' ^. checkpointUtxo
     , _checkpointUtxoBalance = c' ^. checkpointUtxoBalance
     , _checkpointBlockMeta   = c' ^. checkpointBlockMeta
+    , _checkpointChainBrief  = c' ^. checkpointChainBrief
     , _checkpointPending     = unionPending (c  ^. checkpointPending)
                                             (c' ^. checkpointPending)
     } :| cs
