@@ -115,9 +115,9 @@ getAccounts snapshot (V1.WalletId wId) = do
                  --
                  -- This would also ensure maximum compatibility with the
                  -- WalletLayer.Legacy and the migrated datatypes.
-                 Right accs       -> Right . IxSet.fromList
-                                           . map (toV1Account snapshot)
-                                           . IxSet.toList $ accs
+                 Right accs       ->
+                     let f acc a  = IxSet.insert (toV1Account snapshot a) acc
+                     in Right (IxSet.foldl' f IxSet.emptyIxSet accs)
 
 -- | Retrieves a single account.
 getAccount :: Kernel.DB
