@@ -140,8 +140,8 @@ bracketPassiveWallet logFunction keystore nodeAdaptor f =
                                     V1.CreateWallet  -> return (Right theWallet)
                                     V1.RestoreWallet -> do
                                         -- MN: kick off restoration thread
-                                        let wk = (walletId, 
-                                        balance <- restoreWalletBalance
+                                        -- let wk = (walletId, error "MN todo")
+                                        -- balance <- restoreWalletBalance
                                         return $ Right theWallet {
                                             V1.walSyncState =
                                                     V1.Restoring (error "MN: SyncProgress")

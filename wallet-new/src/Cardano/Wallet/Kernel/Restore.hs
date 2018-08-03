@@ -2,37 +2,41 @@
 {-# LANGUAGE RankNTypes #-}
 
 module Cardano.Wallet.Kernel.Restore
- ( initWalletRestoration
+ ( -- initWalletRestoration
  ) where
-
-import Control.Monad.IO.Unlift (MonadUnliftIO)
-import Data.Acid (AcidState)
-import Data.Acid.Advanced (update')
+{-
+import           Control.Monad.IO.Unlift (MonadUnliftIO)
+import           Data.Acid (AcidState)
+import           Data.Acid.Advanced (update')
 import qualified Data.Map as M
-import System.Wlog (WithLogger, logInfo, modifyLoggerName)
-import Universum
+import           System.Wlog (WithLogger, logInfo, modifyLoggerName)
+import           Universum
 
-import Pos.Core (ChainDifficulty, difficultyL)
-import Pos.Core.Block (headerHash)
-import Pos.DB.BlockIndex (getTipHeader)
-import Pos.DB.Class (MonadDBRead)
-import Pos.DB.Txp.Utxo (filterUtxo)
-import Pos.Txp (TxIn, TxOutAux, toaOut, txOutAddress, genesisUtxo)
-import Pos.Txp.Toil.Types (GenesisUtxo, unGenesisUtxo, utxoToModifier)
-import Pos.Wallet.Web.Tracking.Decrypt (decryptAddress)
-import Pos.Wallet.Web.Tracking.Sync (firstGenesisHeader, processSyncError)
-import Pos.Wallet.Web.Tracking.Types (SyncError)
+import           Pos.Chain.Txp.Toil.Types (GenesisUtxo, unGenesisUtxo,
+                     utxoToModifier)
+import           Pos.Core (ChainDifficulty, difficultyL)
+import           Pos.Core.Block (headerHash)
+import           Pos.DB.BlockIndex (getTipHeader)
+import           Pos.DB.Class (MonadDBRead)
+import           Pos.DB.Txp.Utxo (filterUtxo)
+import           Pos.Txp (TxIn, TxOutAux, genesisUtxo, toaOut, txOutAddress)
+import           Pos.Wallet.Web.Tracking.Decrypt (decryptAddress)
+import           Pos.Wallet.Web.Tracking.Sync (firstGenesisHeader,
+                     processSyncError)
+import           Pos.Wallet.Web.Tracking.Types (SyncError)
 
-import Cardano.Wallet.Kernel.DB.AcidState (CreateHdAddress(..),
-    UpdateCurrentCheckpointUtxo(..), DB, SetWalletRestorationSyncTip(..))
-import Cardano.Wallet.Kernel.DB.HdWallet (UnknownHdRoot)
-import Cardano.Wallet.Kernel.DB.HdWallet.Create (initHdAddress,
-    CreateHdAddressError)
-import Cardano.Wallet.Kernel.DB.InDb (InDb(..))
-import Cardano.Wallet.Kernel.MonadDBReadAdaptor (MonadDBReadAdaptor,
-    withMonadDBRead)
-import Cardano.Wallet.Kernel.PrefilterTx (WalletKey, prefilter, toHdAddressId)
-import Cardano.Wallet.Kernel.Types (WalletId(WalletIdHdRnd))
+import           Cardano.Wallet.Kernel.DB.AcidState (CreateHdAddress (..), DB,
+                     SetWalletRestorationSyncTip (..),
+                     UpdateCurrentCheckpointUtxo (..))
+import           Cardano.Wallet.Kernel.DB.HdWallet (UnknownHdRoot)
+import           Cardano.Wallet.Kernel.DB.HdWallet.Create (CreateHdAddressError,
+                     initHdAddress)
+import           Cardano.Wallet.Kernel.DB.InDb (InDb (..))
+import           Cardano.Wallet.Kernel.MonadDBReadAdaptor (MonadDBReadAdaptor,
+                     withMonadDBRead)
+import           Cardano.Wallet.Kernel.PrefilterTx (WalletKey, prefilter,
+                     toHdAddressId)
+import           Cardano.Wallet.Kernel.Types (WalletId (WalletIdHdRnd))
 
 --------------------------------------------------------------------------------
 
@@ -103,3 +107,4 @@ restoreWalletBalance db (wId, wdc) = runExceptT $ do
     isWalletUtxo :: (TxIn, TxOutAux) -> Bool
     isWalletUtxo (_, toa) =
       isJust (decryptAddress wdc (txOutAddress (toaOut toa)))
+-}

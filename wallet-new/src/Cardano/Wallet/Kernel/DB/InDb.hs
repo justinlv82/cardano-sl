@@ -12,10 +12,8 @@ import           Data.SafeCopy (SafeCopy (..))
 
 import qualified Pos.Chain.Txp as Core
 import qualified Pos.Core as Core
-import           Pos.Core.Block (HeaderHash)
 import qualified Pos.Core.Block as Core
-import qualified Pos.Core.Txp as Txp
-import qualified Pos.Crypto as Core
+import           Pos.Crypto (PublicKey (..))
 
 import           Cardano.Wallet.API.V1.Types (SyncThroughput)
 
@@ -55,7 +53,7 @@ instance SafeCopy (InDb Core.Address) where
     getCopy = error "TODO: getCopy for (InDb Core.Address)"
     putCopy = error "TODO: putCopy for (InDb Core.Address)"
 
-instance SafeCopy (InDb (Core.AddressHash Core.PublicKey)) where
+instance SafeCopy (InDb (Core.AddressHash PublicKey)) where
     getCopy = error "TODO: getCopy for (InDb (Core.AddressHash Core.PublicKey))"
     putCopy = error "TODO: putCopy for (InDb (Core.AddressHash Core.PublicKey))"
 
@@ -78,11 +76,6 @@ instance SafeCopy (InDb Core.HeaderHash) where
 instance SafeCopy (InDb Core.Timestamp) where
     getCopy = error "TODO: getCopy for (InDb Core.Timestamp)"
     putCopy = error "TODO: putCopy for (InDb Core.Timestamp)"
-
--- TODO this should live with other core type safecopy instances
-instance SafeCopy Core.TxAux where
-    getCopy = error "TODO: getCopy for (InDb Core.TxAux)"
-    putCopy = error "TODO: putCopy for (InDb Core.TxAux)"
 
 instance SafeCopy (InDb Core.TxAux) where
     getCopy = error "TODO: getCopy for (InDb Core.TxAux)"
@@ -111,10 +104,6 @@ instance SafeCopy (InDb SyncThroughput) where
 instance SafeCopy (InDb Core.ChainDifficulty) where
   getCopy = error "TODO: getCopy for (InDb ChainDifficulty)"
   putCopy = error "TODO: putCopy for (InDb ChainDifficulty)"
-
-instance SafeCopy (InDb HeaderHash) where
-  getCopy = error "TODO: getCopy for (InDb HeaderHash)"
-  putCopy = error "TODO: putCopy for (InDb HeaderHash)"
 
 instance SafeCopy (InDb (Map Core.TxId Core.SlotId)) where
   getCopy = error "TODO: getCopy for (InDb (Map Core.TxId Core.SlotId))"
