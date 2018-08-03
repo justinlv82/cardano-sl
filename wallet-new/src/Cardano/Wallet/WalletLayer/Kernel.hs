@@ -8,7 +8,6 @@ module Cardano.Wallet.WalletLayer.Kernel
 
 import           Universum
 
-import           Data.Default (def)
 import           Data.Maybe (fromJust)
 import           Data.Time.Units (Second)
 import           System.Wlog (Severity (Debug))
@@ -17,7 +16,6 @@ import           Pos.Chain.Block (Blund, Undo (..))
 
 import qualified Cardano.Wallet.Kernel as Kernel
 import qualified Cardano.Wallet.Kernel.Transactions as Kernel
-import qualified Cardano.Wallet.Kernel.Wallets as Kernel
 import qualified Cardano.Wallet.WalletLayer.Kernel.Accounts as Accounts
 import qualified Cardano.Wallet.WalletLayer.Kernel.Addresses as Addresses
 import qualified Cardano.Wallet.WalletLayer.Kernel.Wallets as Wallets
@@ -39,14 +37,12 @@ import           Cardano.Wallet.Kernel.CoinSelection.FromGeneric
                      (CoinSelectionOptions (..), ExpenseRegulation,
                      InputGrouping, newOptions)
 
-import qualified Cardano.Wallet.Kernel.BIP39 as BIP39
 import           Pos.Core (Address, Coin)
 import qualified Pos.Core as Core
 import           Pos.Core.Chrono (OldestFirst (..))
 
 import qualified Cardano.Wallet.Kernel.Actions as Actions
 import           Cardano.Wallet.Kernel.MonadDBReadAdaptor (MonadDBReadAdaptor)
-import           Pos.Crypto.Signing
 
 import           Cardano.Wallet.API.V1.Types (Payment (..),
                      PaymentDistribution (..), PaymentSource (..),
@@ -73,21 +69,9 @@ bracketPassiveWallet logFunction keystore rocksDB f =
                  }
               ) (\invoke -> liftIO (invoke Actions.Shutdown))
               $ \invoke -> do
-                  -- TODO (temporary): build a sample wallet from a backup phrase
-                  _ <- liftIO $ do
-                    Kernel.createHdWallet w
-                                          (def @(BIP39.Mnemonic 12))
-                                          emptyPassphrase
-                                          assuranceLevel
-                                          walletName
-
                   f (passiveWalletLayer w invoke) w
 
   where
-    -- TODO consider defaults
-    walletName       = HD.WalletName "(new wallet)"
-    assuranceLevel   = HD.AssuranceLevelNormal
-
     -- | TODO(ks): Currently not implemented!
     passiveWalletLayer :: Kernel.PassiveWallet
                        -> (Actions.WalletAction Blund -> IO ())
@@ -96,7 +80,9 @@ bracketPassiveWallet logFunction keystore rocksDB f =
         PassiveWalletLayer
             { _pwlCreateWallet          = Wallets.createWallet wallet
 
-            , _pwlGetWalletIds          = error "Not implemented!"
+            , _pwlGetWallets            = do
+                    snapshot <- liftIO (Kernel.getWalletSnapshot wallet)
+                    return (Wallets.getWallets snapshot)
             , _pwlGetWallet             =
                 \walletId -> do
                     snapshot <- liftIO (Kernel.getWalletSnapshot wallet)
