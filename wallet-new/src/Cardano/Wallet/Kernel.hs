@@ -158,7 +158,8 @@ applyBlock pw@PassiveWallet{..} b
 
 -- | Apply multiple blocks, one at a time, to all wallets in the PassiveWallet
 --
---   TODO(@matt-noonan) this will be the responsibility of the worker thread (as part of CBR-243: Wallet restoration)
+--   This is invoked by the wallet worker thread in response to an @ApplyBlocks@
+--   action. You should not need to invoke it directly.
 applyBlocks :: PassiveWallet
             -> OldestFirst [] ResolvedBlock
             -> IO ()

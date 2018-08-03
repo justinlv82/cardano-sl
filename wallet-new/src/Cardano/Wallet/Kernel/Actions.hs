@@ -77,7 +77,7 @@ interp walletInterp action = do
 
       -- If we are not in the midst of a rollback, just apply the blocks.
       ApplyBlocks bs | numPendingRollbacks == 0 -> do
-                         emit "applying some blocks (non-rollback)"
+                         emit ("applying " <> pretty (length bs) <> " blocks (non-rollback)")
                          applyBlocks bs
 
       -- Otherwise, add the blocks to the pending list. If the resulting

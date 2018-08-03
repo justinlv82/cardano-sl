@@ -20,6 +20,7 @@ import           Pos.Chain.Block (Blund, Undo (..))
 
 import qualified Cardano.Wallet.Kernel as Kernel
 import qualified Cardano.Wallet.Kernel.Addresses as Kernel
+import           Cardano.Wallet.Kernel.ChainState (getChainBrief)
 import qualified Cardano.Wallet.Kernel.Transactions as Kernel
 import qualified Cardano.Wallet.Kernel.Wallets as Kernel
 
@@ -29,7 +30,7 @@ import           Cardano.Wallet.Kernel.DB.Resolved (ResolvedBlock)
 import           Cardano.Wallet.Kernel.Diffusion (WalletDiffusion (..))
 import           Cardano.Wallet.Kernel.Keystore (Keystore)
 import           Cardano.Wallet.Kernel.Types (AccountId (..),
-                     RawResolvedBlock (..), fromRawResolvedBlock)
+                     fromRawResolvedBlock, mkRawResolvedBlock)
 import           Cardano.Wallet.WalletLayer.ExecutionTimeLimit
                      (limitExecutionTimeTo)
 import           Cardano.Wallet.WalletLayer.Types (ActiveWalletLayer (..),
@@ -48,7 +49,8 @@ import           Pos.Core.Chrono (OldestFirst (..))
 
 import qualified Cardano.Wallet.API.V1.Types as V1
 import qualified Cardano.Wallet.Kernel.Actions as Actions
-import           Cardano.Wallet.Kernel.NodeStateAdaptor (NodeStateAdaptor)
+import           Cardano.Wallet.Kernel.NodeStateAdaptor (LockContext (..),
+                     NodeStateAdaptor)
 import           Cardano.Wallet.Kernel.Util (getCurrentTimestamp)
 import           Pos.Crypto.Signing
 
@@ -64,14 +66,15 @@ bracketPassiveWallet
     -> Keystore
     -> NodeStateAdaptor IO
     -> (PassiveWalletLayer n -> Kernel.PassiveWallet -> m a) -> m a
-bracketPassiveWallet logFunction keystore rocksDB f =
-    Kernel.bracketPassiveWallet logFunction keystore rocksDB $ \w -> do
+bracketPassiveWallet logFunction keystore nodeAdaptor f =
+    Kernel.bracketPassiveWallet logFunction keystore nodeAdaptor $ \w -> do
 
       -- Create the wallet worker and its communication endpoint `invoke`.
       bracket (liftIO $ Actions.forkWalletWorker $ Actions.WalletActionInterp
-                 { Actions.applyBlocks  =  \blunds ->
-                     Kernel.applyBlocks w $
-                         OldestFirst (mapMaybe blundToResolvedBlock (toList (getOldestFirst blunds)))
+                 { Actions.applyBlocks  =  \blunds -> do
+
+                         blocks <- catMaybes <$> forM (toList (getOldestFirst blunds)) blundToResolvedBlock
+                         Kernel.applyBlocks w (OldestFirst blocks)
                  , Actions.switchToFork = \_ _ -> logFunction Debug "<switchToFork>"
                  , Actions.emit         = logFunction Debug
                  }
@@ -101,41 +104,48 @@ bracketPassiveWallet logFunction keystore rocksDB f =
             { _pwlCreateWallet   =
                 \(V1.NewWallet (V1.BackupPhrase mnemonic) mbSpendingPassword v1AssuranceLevel v1WalletName operation) -> do
                     liftIO $ limitExecutionTimeTo (30 :: Second) CreateWalletTimeLimitReached $ do
-                        case operation of
-                             V1.RestoreWallet -> error "Not implemented, see [CBR-243]."
-                             V1.CreateWallet  -> do
-                                 let spendingPassword = maybe emptyPassphrase coerce mbSpendingPassword
-                                 let hdAssuranceLevel = case v1AssuranceLevel of
-                                       V1.NormalAssurance -> HD.AssuranceLevelNormal
-                                       V1.StrictAssurance -> HD.AssuranceLevelStrict
+                        let spendingPassword = maybe emptyPassphrase coerce mbSpendingPassword
+                        let hdAssuranceLevel = case v1AssuranceLevel of
+                                V1.NormalAssurance -> HD.AssuranceLevelNormal
+                                V1.StrictAssurance -> HD.AssuranceLevelStrict
 
-                                 res <- liftIO $ Kernel.createHdWallet wallet
-                                                                       mnemonic
-                                                                       spendingPassword
-                                                                       hdAssuranceLevel
-                                                                       (HD.WalletName v1WalletName)
-                                 case res of
-                                      Left kernelError ->
-                                          return (Left $ CreateWalletError kernelError)
-                                      Right hdRoot -> do
-                                          let (hasSpendingPassword, mbLastUpdate) =
-                                                  case hdRoot ^. HD.hdRootHasPassword of
-                                                       HD.NoSpendingPassword -> (False, Nothing)
-                                                       HD.HasSpendingPassword lastUpdate -> (True, Just (lastUpdate ^. fromDb))
-                                          now <- liftIO getCurrentTimestamp
-                                          let lastUpdate = fromMaybe now mbLastUpdate
-                                          let createdAt  = hdRoot ^. HD.hdRootCreatedAt . fromDb
-                                          let walletId = hdRoot ^. HD.hdRootId . to (sformat build . _fromDb . HD.getHdRootId)
-                                          return $ Right V1.Wallet {
-                                              walId                         = (V1.WalletId walletId)
-                                            , walName                       = v1WalletName
-                                            , walBalance                    = V1 (mkCoin 0)
-                                            , walHasSpendingPassword        = hasSpendingPassword
-                                            , walSpendingPasswordLastUpdate = V1 lastUpdate
-                                            , walCreatedAt                  = V1 createdAt
-                                            , walAssuranceLevel             = v1AssuranceLevel
-                                            , walSyncState                  = V1.Synced
-                                          }
+                        res <- liftIO $ Kernel.createHdWallet wallet
+                                                              mnemonic
+                                                              spendingPassword
+                                                              hdAssuranceLevel
+                                                              (HD.WalletName v1WalletName)
+                        case res of
+                            Left kernelError ->
+                                return (Left $ CreateWalletError kernelError)
+                            Right hdRoot -> do
+                                let (hasSpendingPassword, mbLastUpdate) =
+                                        case hdRoot ^. HD.hdRootHasPassword of
+                                            HD.NoSpendingPassword -> (False, Nothing)
+                                            HD.HasSpendingPassword lastUpdate -> (True, Just (lastUpdate ^. fromDb))
+                                now <- liftIO getCurrentTimestamp
+                                let lastUpdate = fromMaybe now mbLastUpdate
+                                let createdAt  = hdRoot ^. HD.hdRootCreatedAt . fromDb
+                                let walletId = hdRoot ^. HD.hdRootId . to (sformat build . _fromDb . HD.getHdRootId)
+                                let theWallet = V1.Wallet {
+                                          walId                         = (V1.WalletId walletId)
+                                        , walName                       = v1WalletName
+                                        , walBalance                    = V1 (mkCoin 0)
+                                        , walHasSpendingPassword        = hasSpendingPassword
+                                        , walSpendingPasswordLastUpdate = V1 lastUpdate
+                                        , walCreatedAt                  = V1 createdAt
+                                        , walAssuranceLevel             = v1AssuranceLevel
+                                        , walSyncState                  = V1.Synced
+                                        }
+                                case operation of
+                                    V1.CreateWallet  -> return (Right theWallet)
+                                    V1.RestoreWallet -> do
+                                        -- MN: kick off restoration thread
+                                        let wk = (walletId, 
+                                        balance <- restoreWalletBalance
+                                        return $ Right theWallet {
+                                            V1.walSyncState =
+                                                    V1.Restoring (error "MN: SyncProgress")
+                                            }
 
             , _pwlGetWalletIds   = error "Not implemented!"
             , _pwlGetWallet      = error "Not implemented!"
@@ -172,14 +182,15 @@ bracketPassiveWallet logFunction keystore rocksDB f =
 
     -- The use of the unsafe constructor 'UnsafeRawResolvedBlock' is justified
     -- by the invariants established in the 'Blund'.
-    blundToResolvedBlock :: Blund -> Maybe ResolvedBlock
-    blundToResolvedBlock (b,u)
-        = rightToJust b <&> \mainBlock ->
-            fromRawResolvedBlock (error "TODO: blundToResolvedBlock chainBrief")
-            $ UnsafeRawResolvedBlock mainBlock spentOutputs'
-        where
-            spentOutputs' = map (map fromJust) $ undoTx u
-            rightToJust   = either (const Nothing) Just
+    blundToResolvedBlock :: Blund -> IO (Maybe ResolvedBlock)
+
+    blundToResolvedBlock (Right mainBlock, u) = Just <$> do
+        brief <- getChainBrief nodeAdaptor AlreadyLocked -- Q: is this right?
+        let spentOutputs' = map (map fromJust) $ undoTx u
+            resolved      = mkRawResolvedBlock mainBlock spentOutputs'
+        return (fromRawResolvedBlock brief resolved)
+
+    blundToResolvedBlock _ = return Nothing
 
 -- | Initialize the active wallet.
 -- The active wallet is allowed to send transactions, as it has the full

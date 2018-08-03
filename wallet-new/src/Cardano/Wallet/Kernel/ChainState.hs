@@ -136,7 +136,20 @@ getChainBrief node lc = withNodeState node $ \withLock -> do
         -- block or the genesis block. If it's the former, we should somehow
         -- figure out the preceding block instead. If it's the genesis block,
         -- we should return a special value.
-        error "getChainBrief: genesis/EBB case not yet implemented"
+
+        {- MN FIXME: stub out some value here.
+        return ChainBrief {
+            cbSlotId = 0
+          , cbTip    = headerHash tip
+          , cbState  = ChainState {
+                  csBlockVersion    = bv
+                , csScriptVersion   = bvdScriptVersion bvd
+                , csMaxTxSize       = bvdMaxTxSize     bvd
+                , csSoftwareVersion = SoftwareVersion ourAppName sv
+                }
+          }
+          -}
+        error ("getChainBrief: genesis/EBB case not yet implemented")
       Right slotId -> do
         return ChainBrief {
             cbSlotId = slotId
