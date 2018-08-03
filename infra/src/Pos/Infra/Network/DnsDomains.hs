@@ -129,7 +129,7 @@ instance FromJSON IP where
         | otherwise = fail "Unable to parse IP"
     parseJSON v = A.typeMismatch "IP" v
 
-instance A.ToJSON (NodeAddr DNS.Domain) where
+instance ToJSON (NodeAddr DNS.Domain) where
     toJSON =
         A.object . \case
             (NodeAddrExact ip mWord) ->
@@ -161,7 +161,7 @@ instance A.ToJSON (NodeAddr DNS.Domain) where
                          , "port" .= (toJSON (Prelude.read "3000" :: Word16))
                          ]
 
-instance A.FromJSON (NodeAddr DNS.Domain) where
+instance FromJSON (NodeAddr DNS.Domain) where
     parseJSON = A.withObject "NodeAddr" $ extractNodeAddr (toAesonError . aux)
       where
         aux :: Maybe DNS.Domain -> Either Text DNS.Domain

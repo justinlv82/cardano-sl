@@ -26,7 +26,7 @@ module Test.Pos.Infra.Gen
         , genMaxBucketSize
         , genNodeAddr
         , genNodeAddrMaybe
-        , genNodeMetaData
+        , genNodeMetadata
         , genNodeName
         , genNodeType
         , genNodeRoutes
@@ -176,8 +176,8 @@ genNodeAddr genA = Gen.choice
 genNodeAddrMaybe :: Gen (NodeAddr (Maybe DNS.Domain))
 genNodeAddrMaybe = genNodeAddr (Just <$> genDomain)
 
-genNodeMetaData :: Gen NodeMetadata
-genNodeMetaData = do
+genNodeMetadata :: Gen NodeMetadata
+genNodeMetadata = do
     nmType'       <- genNodeType
     nmRegion'     <- genNodeRegion
     nmValency'    <- Gen.int (Range.constant 1 10)
@@ -237,7 +237,7 @@ genNodeRegion = NodeRegion <$> Gen.text (Range.constant 1 10) Gen.alphaNum
 
 genAllStaticallyKnownPeers :: Gen AllStaticallyKnownPeers
 genAllStaticallyKnownPeers =
-    AllStaticallyKnownPeers <$> customMapGen genNodeName genNodeMetaData
+    AllStaticallyKnownPeers <$> customMapGen genNodeName genNodeMetadata
 
 genTopology :: Gen Topology
 genTopology = Gen.choice [ TopologyStatic <$> genAllStaticallyKnownPeers
