@@ -173,6 +173,22 @@ instance ToJSON WalletError where
         pairs $ pairStr "status" (toEncoding $ String "error")
              <> pairStr "diagnostic" (pairs $ mempty)
              <> "message" .= String "TxFailedToStabilize"
+    toEncoding (InvalidPublicKey weProblem) =
+        pairs $ pairStr "status" (toEncoding $ String "error")
+             <> pairStr "diagnostic" (pairs $ pairStr "msg" (toEncoding weProblem))
+             <> "message" .= String "InvalidPublicKey"
+    toEncoding (UnsignedTxCreationError) =
+        pairs $ pairStr "status" (toEncoding $ String "error")
+             <> pairStr "diagnostic" (pairs $ mempty)
+             <> "message" .= String "UnsignedTxCreationError"
+    toEncoding (TooBigTransaction) =
+        pairs $ pairStr "status" (toEncoding $ String "error")
+             <> pairStr "diagnostic" (pairs $ mempty)
+             <> "message" .= String "TooBigTransaction"
+    toEncoding (SignedTxSubmitError weProblem) =
+        pairs $ pairStr "status" (toEncoding $ String "error")
+             <> pairStr "diagnostic" (pairs $ pairStr "msg" (toEncoding weProblem))
+             <> "message" .= String "SignedTxSubmitError"
     toEncoding (TxRedemptionDepleted) =
         pairs $ pairStr "status" (toEncoding $ String "error")
              <> pairStr "diagnostic" (pairs $ mempty)
@@ -187,6 +203,10 @@ instance ToJSON WalletError where
              <> pairStr "diagnostic"
                  (pairs $ pairStr "params" (toEncoding requiredParams))
              <> "message" .= String "MissingRequiredParams"
+    toEncoding (CannotCreateAddress weProblem) =
+        pairs $ pairStr "status" (toEncoding $ String "error")
+             <> pairStr "diagnostic" (pairs $ pairStr "msg" (toEncoding weProblem))
+             <> "message" .= String "CannotCreateAddress"
     toEncoding (WalletIsNotReadyToProcessPayments weStillRestoring) =
         toEncoding $ toJSON weStillRestoring
     toEncoding (NodeIsStillSyncing wenssStillSyncing) =
